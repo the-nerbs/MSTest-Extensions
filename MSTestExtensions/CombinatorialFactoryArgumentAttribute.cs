@@ -9,7 +9,7 @@ namespace MSTestExtensions
 {
     /// <summary>
     /// Attribute used to describe a set of values to pass for an argument to a combinatorial test.
-    /// This will retrieve the list of values from a static function on the test class.
+    /// This will retrieve the list of values from a static function.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public sealed class CombinatorialFactoryArgumentAttribute : BaseCombinatorialArgumentAttribute
@@ -21,6 +21,11 @@ namespace MSTestExtensions
         /// Gets the name of the factory method.
         /// </summary>
         public string FactoryMethodName { get; }
+
+        /// <summary>
+        /// Gets or sets the type that declares the factory method.
+        /// </summary>
+        public Type FactoryDeclaringType { get; set; }
 
 
         /// <summary>
@@ -80,17 +85,22 @@ namespace MSTestExtensions
             const BindingFlags binding = BindingFlags.Public | BindingFlags.NonPublic
                                        | BindingFlags.Static;
 
-            // try to resolve the actual test class by its name
-            TypeInfo testClassType = Type.GetType(testMethod.TestClassName)?.GetTypeInfo();
+            // If we don't have a factory type, try to resolve the actual test class by its name
+            // It that also fails, just use the test method's declaring type.
+            Type testClassType = FactoryDeclaringType
+                              ?? Type.GetType(testMethod.TestClassName)
+                              ?? testMethod.MethodInfo.DeclaringType;
 
             if (testClassType == null)
             {
+                // TODO: can this case ever be hit?
                 throw new ArgumentException(
-                    $"Failed to resolve type info for test class {testMethod.TestClassName}."
+                    $"Failed to resolve type for test class {testMethod.TestClassName}."
                 );
             }
 
-            MethodInfo factoryMethod = testClassType.GetMethod(FactoryMethodName, binding);
+            MethodInfo factoryMethod = testClassType.GetTypeInfo()
+                                                    .GetMethod(FactoryMethodName, binding);
 
             if (factoryMethod == null)
             {
