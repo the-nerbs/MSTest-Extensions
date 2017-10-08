@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Label="Assembly signing"
+          Condition="exists('$(SolutionDir)Signing.props')"
+          Project="$(SolutionDir)Signing.props" />
+
   <PropertyGroup>
-    <TargetFramework>netstandard1.5</TargetFramework>
+    <TargetFrameworks>netstandard1.5;net45</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Nerbs.MSTestExtensions</PackageId>
     <Authors>the-nerbs</Authors>
@@ -10,11 +14,12 @@
     <NeutralLanguage>en</NeutralLanguage>
     <PackageTags>MSTest, Extension, Test, Unittest</PackageTags>
     <Copyright>Copyright © the-nerbs 2017</Copyright>
-    <Description>Contains a number of MS Test v2 extensions that I made and have found some general use for.</Description>
+    <Description>Contains a number of MS Test v2 extensions that I made and have some general use for.</Description>
   </PropertyGroup>
 
   <PropertyGroup>
     <DocumentationFile>bin\Debug\netstandard1.5\MSTestExtensions.xml</DocumentationFile>
+    <PackageProjectUrl>https://github.com/the-nerbs/MSTest-Extensions</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>

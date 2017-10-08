@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F2C8D510-AA8A-4879-8910-5C130A2D2764}"
 	ProjectSection(SolutionItems) = preProject
 		Doxyfile = Doxyfile
+		Signing.props = Signing.props
 	EndProjectSection
 EndProject
 Global
