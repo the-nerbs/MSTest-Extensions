@@ -1,7 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.4</TargetFramework>
+    <TargetFramework>netstandard1.5</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>Nerbs.MSTestExtensions</PackageId>
+    <Authors>the-nerbs</Authors>
+    <Company>the-nerbs</Company>
+    <Product>Nerbs.MSTestExtensions</Product>
+    <NeutralLanguage>en</NeutralLanguage>
+    <PackageTags>MSTest, Extension, Test, Unittest</PackageTags>
+    <Copyright>Copyright © the-nerbs 2017</Copyright>
+    <Description>Contains a number of MS Test v2 extensions that I made and have found some general use for.</Description>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <DocumentationFile>bin\Debug\netstandard1.5\MSTestExtensions.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
+  </ItemGroup>
 
 </Project>
