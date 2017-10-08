@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Globalization;
 
 namespace MSTestExtensions
 {
@@ -278,6 +277,12 @@ namespace MSTestExtensions
         }
 
 
+        /// <summary>
+        /// Checks a file for a specific byte sequence.
+        /// </summary>
+        /// <param name="path">The path to the file to check.</param>
+        /// <param name="searchBytes">The byte sequence to look for.</param>
+        /// <returns>True if the sequence was found, or false if not.</returns>
         private static bool InternalContainsBytes(string path, byte[] searchBytes)
         {
             Assert.That.FileExists(path);
