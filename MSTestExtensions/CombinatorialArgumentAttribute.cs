@@ -7,7 +7,7 @@ namespace MSTestExtensions
 {
     /// <summary>
     /// Attribute used to describe a set of values to pass for an argument to a combinatorial test.
-    /// This uses the values that are passed to the constructor.
+    /// This uses a set of values that are passed to the constructor.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public sealed class CombinatorialArgumentAttribute : BaseCombinatorialArgumentAttribute
@@ -15,12 +15,6 @@ namespace MSTestExtensions
         /// <summary>
         /// Gets the list of values to pass for the argument.
         /// </summary>
-        /// <remarks>
-        /// When creating an extension to this attribute, if generating the list of values may
-        /// result in an exception, then it should be done when this property is invoked as
-        /// opposed to in the constructor as the execution engine may skip the test if the
-        /// constructor throws an exception.
-        /// </remarks>
         public IReadOnlyList<object> Values { get; }
 
 

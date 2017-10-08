@@ -120,6 +120,9 @@ namespace MSTestExtensions
             }
             catch (Exception ex)
             {
+                // something went wrong - fail the test with the exception info.
+                // note: I believe the MSTest executor will catch any exceptions that escape
+                // tests, and return a failed TestResult (if it wasn't an ExpectedException).
                 return new[]
                 {
                     new TestResult
@@ -137,6 +140,11 @@ namespace MSTestExtensions
         /// </summary>
         /// <param name="testMethod">The test method.</param>
         /// <param name="attributes">The list of combinatorial argument attributes.</param>
+        /// <exception cref="Exception">An error is found with the attributes.</exception>
+        /// <devdoc>
+        /// The MSTest executor seems to do some special handling for base Exception type, where it
+        /// will omit the exception type.
+        /// </devdoc>
         private static void ValidateAttributes(ITestMethod testMethod, BaseCombinatorialArgumentAttribute[] attributes)
         {
             ParameterInfo[] parameters = testMethod.MethodInfo.GetParameters();
@@ -195,18 +203,28 @@ namespace MSTestExtensions
             }
         }
 
-        private static object[][] GetArgumentsInOrder(ITestMethod testMethod, BaseCombinatorialArgumentAttribute[] args)
+        /// <summary>
+        /// Gets all the values for each parameter in the order they need to be passed to the function.
+        /// </summary>
+        /// <param name="testMethod">The test method.</param>
+        /// <param name="attributes">The list of combinatorial argument attributes.</param>
+        /// <returns>
+        /// A list of all parameters' values.  Each sub-array corresponds to a parameter, so
+        /// <c>argArrays[0]</c> will yield the values to pass to the first parameter. Additionally,
+        /// <c>argArrays[0][0]</c> will yield the first value to pass to the first parameter.
+        /// </returns>
+        private static object[][] GetArgumentsInOrder(ITestMethod testMethod, BaseCombinatorialArgumentAttribute[] attributes)
         {
-            var argsAndOrder = new Tuple<int, object[]>[args.Length];
+            var argsAndOrder = new Tuple<int, object[]>[attributes.Length];
 
             ParameterInfo[] parameters = testMethod.MethodInfo.GetParameters();
 
-            for (int i = 0; i < args.Length; i++)
+            for (int i = 0; i < attributes.Length; i++)
             {
-                int index = args[i].ArgumentIndex
-                         ?? Array.FindIndex(parameters, p => p.Name == args[i].ArgumentName);
+                int index = attributes[i].ArgumentIndex
+                         ?? Array.FindIndex(parameters, p => p.Name == attributes[i].ArgumentName);
 
-                argsAndOrder[i] = Tuple.Create(index, args[i].GetValues(testMethod).ToArray());
+                argsAndOrder[i] = Tuple.Create(index, attributes[i].GetValues(testMethod).ToArray());
             }
 
             return argsAndOrder
@@ -215,6 +233,11 @@ namespace MSTestExtensions
                 .ToArray();
         }
 
+        /// <summary>
+        /// Validates the values being passed to each parameter.
+        /// </summary>
+        /// <param name="testMethod">The test method.</param>
+        /// <param name="arguments">The set of values for each parameter, as returned by <see cref="GetArgumentsInOrder"/>.</param>
         private static void ValidateArguments(ITestMethod testMethod, object[][] arguments)
         {
             ParameterInfo[] allParameters = testMethod.MethodInfo.GetParameters();
@@ -239,6 +262,12 @@ namespace MSTestExtensions
         }
 
 
+        /// <summary>
+        /// Creates a name for the test as run using the given arguments.
+        /// </summary>
+        /// <param name="method">The test method.</param>
+        /// <param name="arguments">The argument values.</param>
+        /// <returns>A name for the test as run with the given arguments.</returns>
         private static string GetTestDisplayName(ITestMethod method, object[] arguments)
         {
             StringBuilder name = new StringBuilder(method.TestMethodName);
@@ -262,6 +291,11 @@ namespace MSTestExtensions
             return name.ToString();
         }
 
+        /// <summary>
+        /// Converts the given value to a string.
+        /// </summary>
+        /// <param name="value">The value to convert.</param>
+        /// <returns>The string form of the given value.</returns>
         private static string GetValueString(object value)
         {
             switch (value)

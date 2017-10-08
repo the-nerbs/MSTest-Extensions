@@ -74,7 +74,7 @@ namespace MSTestExtensions
         /// Runs the factory method.
         /// </summary>
         /// <param name="testMethod"></param>
-        /// <returns></returns>
+        /// <returns>Gets the list of values returned by the factory method.</returns>
         private IReadOnlyList<object> RunFactory(ITestMethod testMethod)
         {
             const BindingFlags binding = BindingFlags.Public | BindingFlags.NonPublic
@@ -119,7 +119,9 @@ namespace MSTestExtensions
 
             if (values == null)
             {
-                throw new ArgumentException($"The factory method {FactoryMethodName} returned a null collection.");
+                throw new ArgumentException(
+                    $"The factory method {FactoryMethodName} returned a null collection."
+                );
             }
 
             return values.Cast<object>().ToArray();
