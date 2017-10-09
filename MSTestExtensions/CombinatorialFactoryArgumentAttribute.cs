@@ -12,7 +12,7 @@ namespace MSTestExtensions
     /// This will retrieve the list of values from a static function.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public sealed class CombinatorialFactoryArgumentAttribute : BaseCombinatorialArgumentAttribute
+    public class CombinatorialFactoryArgumentAttribute : BaseCombinatorialArgumentAttribute
     {
         private IReadOnlyList<object> _values = null;
 
@@ -76,17 +76,21 @@ namespace MSTestExtensions
 
 
         /// <summary>
-        /// Runs the factory method.
+        /// Resolves the factory method from the test class.
         /// </summary>
-        /// <param name="testMethod"></param>
-        /// <returns>Gets the list of values returned by the factory method.</returns>
-        private IReadOnlyList<object> RunFactory(ITestMethod testMethod)
+        /// <param name="testMethod">The test method being run.</param>
+        /// <returns>The MethodInfo for the factory method, or null if it could not be resolved.</returns>
+        /// <remarks>
+        /// To customize how factory methods are resolved, you can inherit from this
+        /// type and override this method to perform the necessary logic.
+        /// </remarks>
+        protected virtual MethodInfo ResolveFactory(ITestMethod testMethod)
         {
             const BindingFlags binding = BindingFlags.Public | BindingFlags.NonPublic
                                        | BindingFlags.Static;
 
-            // If we don't have a factory type, try to resolve the actual test class by its name
-            // It that also fails, just use the test method's declaring type.
+            // Try to resolve the actual test class by its name.
+            // It that fails, just use the test method's declaring type.
             Type testClassType = FactoryDeclaringType
                               ?? Type.GetType(testMethod.TestClassName)
                               ?? testMethod.MethodInfo.DeclaringType;
@@ -99,14 +103,23 @@ namespace MSTestExtensions
                 );
             }
 
-            MethodInfo factoryMethod = testClassType.GetTypeInfo()
-                                                    .GetMethod(FactoryMethodName, binding);
+            return testClassType.GetTypeInfo()
+                                .GetMethod(FactoryMethodName, binding);
+        }
+
+        /// <summary>
+        /// Runs the factory method.
+        /// </summary>
+        /// <param name="testMethod"></param>
+        /// <returns>Gets the list of values returned by the factory method.</returns>
+        private IReadOnlyList<object> RunFactory(ITestMethod testMethod)
+        {
+            MethodInfo factoryMethod = ResolveFactory(testMethod);
 
             if (factoryMethod == null)
             {
                 throw new ArgumentException(
-                    $"The factory method {FactoryMethodName} does not exist on type " +
-                    $"{testClassType.FullName}."
+                    $"Unable to resolve factory method {FactoryMethodName}."
                 );
             }
             else if (!factoryMethod.IsStatic)
