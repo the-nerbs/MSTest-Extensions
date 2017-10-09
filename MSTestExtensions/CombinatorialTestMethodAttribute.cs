@@ -26,23 +26,23 @@ namespace MSTestExtensions
     ///       <description>Description</description>
     ///     </listheader>
     ///     <item>
-    ///       <term><see cref="CombinatorialArgumentAttribute"/></term>
+    ///       <term><see cref="CombinatorialAttribute"/></term>
     ///       <description>Utilizes a set of given values for the argument.</description>
     ///     </item>
     ///     <item>
-    ///       <term><see cref="CombinatorialEnumArgument"/></term>
+    ///       <term><see cref="CombinatorialEnumAttribute"/></term>
     ///       <description>Utilizes all defined values of an enumeration for the argument.</description>
     ///     </item>
     ///     <item>
-    ///       <term><see cref="CombinatorialFactoryArgumentAttribute"/></term>
+    ///       <term><see cref="CombinatorialFactoryAttribute"/></term>
     ///       <description>Retrieves the argument's values from a static method on the test class.</description>
     ///     </item>
     ///   </list>
     /// </remarks>
     /// <seealso cref="BaseCombinatorialArgumentAttribute"/>
-    /// <seealso cref="CombinatorialArgumentAttribute"/>
-    /// <seealso cref="CombinatorialEnumArgument"/>
-    /// <seealso cref="CombinatorialFactoryArgumentAttribute"/>
+    /// <seealso cref="CombinatorialAttribute"/>
+    /// <seealso cref="CombinatorialEnumAttribute"/>
+    /// <seealso cref="CombinatorialFactoryAttribute"/>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public sealed class CombinatorialTestMethodAttribute : TestMethodAttribute
     {
@@ -55,25 +55,14 @@ namespace MSTestExtensions
         {
             try
             {
-                var attrs = testMethod.GetAttributes<BaseCombinatorialArgumentAttribute>(inherit: true);
+                ValidateAttributes(testMethod);
 
-                ValidateAttributes(testMethod, attrs);
-
-                object[][] args = GetArgumentsInOrder(testMethod, attrs);
-
-                long totalTests = 1;
-
-                checked
-                {
-                    foreach (object[] list in args)
-                    {
-                        totalTests *= list.Length;
-                    }
-                }
-
-                int totalTestsDigits = (int)Math.Ceiling(Math.Log10(totalTests));
+                object[][] args = GetArgumentsInOrder(testMethod);
 
                 ValidateArguments(testMethod, args);
+
+                // get the count of tests so we know how to format the # in the test name.
+                int totalTestsDigits = ComputeTotalTestCountDigits(args);
 
                 var indexes = new int[args.Length];
                 bool done;
@@ -82,11 +71,11 @@ namespace MSTestExtensions
                 do
                 {
                     // run the test with the current values.
-                    var argsToPass = Enumerable.Range(0, args.Length)
-                                               .Select(i => args[i][indexes[i]])
-                                               .ToArray();
+                    object[] argsToPass = Enumerable.Range(0, args.Length)
+                                                    .Select(i => args[i][indexes[i]])
+                                                    .ToArray();
 
-                    var result = testMethod.Invoke(argsToPass);
+                    TestResult result = testMethod.Invoke(argsToPass);
 
                     // In case the results are alphabetized (I'm looking at you
                     // VS test explorer), prepend the test # padded with 0s.
@@ -139,65 +128,21 @@ namespace MSTestExtensions
         /// Validates that each of the test method parameters have a combinatorial argument attribute.
         /// </summary>
         /// <param name="testMethod">The test method.</param>
-        /// <param name="attributes">The list of combinatorial argument attributes.</param>
         /// <exception cref="Exception">An error is found with the attributes.</exception>
         /// <devdoc>
         /// The MSTest executor seems to do some special handling for base Exception type, where it
         /// will omit the exception type.
         /// </devdoc>
-        private static void ValidateAttributes(ITestMethod testMethod, BaseCombinatorialArgumentAttribute[] attributes)
+        private static void ValidateAttributes(ITestMethod testMethod)
         {
             ParameterInfo[] parameters = testMethod.MethodInfo.GetParameters();
 
-            if (parameters.Length != attributes.Length)
+            foreach (var parm in parameters)
             {
-                throw new Exception(
-                    $"Count of {nameof(BaseCombinatorialArgumentAttribute)}s does not match number of parameters."
-                );
-            }
-
-            var matched = new bool[parameters.Length];
-            foreach (var attr in attributes)
-            {
-                int index;
-
-                if (attr.ArgumentIndex != null)
-                {
-                    index = attr.ArgumentIndex.Value;
-                    if (index < 0 || index >= parameters.Length)
-                    {
-                        throw new Exception(
-                            $"{index} is not a valid parameter index."
-                        );
-                    }
-                }
-                else
-                {
-                    index = Array.FindIndex(parameters, p => p.Name == attr.ArgumentName);
-                    if (index == -1)
-                    {
-                        throw new Exception(
-                            $"Test method does not have an argument named {attr.ArgumentName}."
-                        );
-                    }
-                }
-
-                if (matched[index])
+                if (parm.GetCustomAttribute<BaseCombinatorialArgumentAttribute>(inherit: true) == null)
                 {
                     throw new Exception(
-                        $"Argument {index} has duplicate combinatorial data."
-                    );
-                }
-
-                matched[index] = true;
-            }
-
-            for (int i = 0; i < matched.Length; i++)
-            {
-                if (!matched[i])
-                {
-                    throw new Exception(
-                        $"Argument {parameters[i].Name} is missing a {nameof(BaseCombinatorialArgumentAttribute)}."
+                        $"Parameter {parm.Name} is missing a {nameof(BaseCombinatorialArgumentAttribute)}."
                     );
                 }
             }
@@ -207,30 +152,24 @@ namespace MSTestExtensions
         /// Gets all the values for each parameter in the order they need to be passed to the function.
         /// </summary>
         /// <param name="testMethod">The test method.</param>
-        /// <param name="attributes">The list of combinatorial argument attributes.</param>
         /// <returns>
         /// A list of all parameters' values.  Each sub-array corresponds to a parameter, so
         /// <c>argArrays[0]</c> will yield the values to pass to the first parameter. Additionally,
         /// <c>argArrays[0][0]</c> will yield the first value to pass to the first parameter.
         /// </returns>
-        private static object[][] GetArgumentsInOrder(ITestMethod testMethod, BaseCombinatorialArgumentAttribute[] attributes)
+        private static object[][] GetArgumentsInOrder(ITestMethod testMethod)
         {
-            var argsAndOrder = new Tuple<int, object[]>[attributes.Length];
+            var values = new List<object[]>();
 
-            ParameterInfo[] parameters = testMethod.MethodInfo.GetParameters();
-
-            for (int i = 0; i < attributes.Length; i++)
+            foreach (var p in testMethod.MethodInfo.GetParameters())
             {
-                int index = attributes[i].ArgumentIndex
-                         ?? Array.FindIndex(parameters, p => p.Name == attributes[i].ArgumentName);
+                var attr = p.GetCustomAttribute<BaseCombinatorialArgumentAttribute>();
+                IReadOnlyList<object> paramValues = attr.GetValues(testMethod, p);
 
-                argsAndOrder[i] = Tuple.Create(index, attributes[i].GetValues(testMethod).ToArray());
+                values.Add(paramValues.ToArray());
             }
 
-            return argsAndOrder
-                .OrderBy(tpl => tpl.Item1)
-                .Select(tpl => tpl.Item2)
-                .ToArray();
+            return values.ToArray();
         }
 
         /// <summary>
@@ -312,6 +251,34 @@ namespace MSTestExtensions
 
                 default:
                     return value.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Computes the total number of digits in the test count.
+        /// Used to figure out how much to pad the test # for <see cref="TestResult.DisplayName"/>.
+        /// </summary>
+        /// <param name="arguments">The set of values for each parameter, as returned by <see cref="GetArgumentsInOrder"/>.</param>
+        /// <returns>The number of digits in the test count.</returns>
+        private static int ComputeTotalTestCountDigits(object[][] arguments)
+        {
+            try
+            {
+                long totalTests = 1;
+
+                checked
+                {
+                    foreach (object[] list in arguments)
+                    {
+                        totalTests *= list.Length;
+                    }
+                }
+
+                return (int)Math.Ceiling(Math.Log10(totalTests));
+            }
+            catch (OverflowException)
+            {
+                return 1;
             }
         }
     }

@@ -11,8 +11,8 @@ namespace MSTestExtensions
     /// Attribute used to describe a set of values to pass for an argument to a combinatorial test.
     /// This will retrieve the list of values from a static function.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class CombinatorialFactoryArgumentAttribute : BaseCombinatorialArgumentAttribute
+    [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false)]
+    public class CombinatorialFactoryAttribute : BaseCombinatorialArgumentAttribute
     {
         private IReadOnlyList<object> _values = null;
 
@@ -29,31 +29,14 @@ namespace MSTestExtensions
 
 
         /// <summary>
-        /// Initializes a new instance of <see cref="CombinatorialFactoryArgumentAttribute"/>.
+        /// Initializes a new instance of <see cref="CombinatorialFactoryAttribute"/>.
         /// </summary>
-        /// <param name="argIndex">The index of the argument this is for.</param>
         /// <param name="factoryMethodName">The name of the method used to generate values for this argument.</param>
-        public CombinatorialFactoryArgumentAttribute(int argIndex, string factoryMethodName)
-            : base(argIndex)
+        public CombinatorialFactoryAttribute(string factoryMethodName)
         {
             if (factoryMethodName == null)
                 throw new ArgumentNullException(nameof(factoryMethodName));
-            if (string.IsNullOrWhiteSpace(factoryMethodName))
-                throw new ArgumentException("Invalid factory method name.", nameof(factoryMethodName));
 
-            FactoryMethodName = factoryMethodName;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="CombinatorialFactoryArgumentAttribute"/>.
-        /// </summary>
-        /// <param name="argName">The name of the argument this is for.</param>
-        /// <param name="factoryMethodName">The name of the method used to generate values for this argument.</param>
-        public CombinatorialFactoryArgumentAttribute(string argName, string factoryMethodName)
-            : base(argName)
-        {
-            if (factoryMethodName == null)
-                throw new ArgumentNullException(nameof(factoryMethodName));
             if (string.IsNullOrWhiteSpace(factoryMethodName))
                 throw new ArgumentException("Invalid factory method name.", nameof(factoryMethodName));
 
@@ -62,8 +45,8 @@ namespace MSTestExtensions
 
 
         /// <inheritdoc />
-        /// <see cref="BaseCombinatorialArgumentAttribute.GetValues(ITestMethod)"/>
-        public override IReadOnlyList<object> GetValues(ITestMethod testMethod)
+        /// <see cref="BaseCombinatorialArgumentAttribute.GetValues"/>
+        public override IReadOnlyList<object> GetValues(ITestMethod testMethod, ParameterInfo parameter)
         {
             if (_values == null)
             {
